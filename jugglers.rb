@@ -27,15 +27,33 @@ class Circuit < Skilz
   end
 
   def show_jugglers_on_circuit
+    puts_jugglers = []
     @jugglers.each_with_index do |juggler, juggler_number|
-      juggler.choice_circuits
-      puts "j#{juggler_number}"
+      puts_jugglers <<  "j#{juggler_number}"
+      juggler.choice_circuits.each do |choice, circuit|
+        puts_jugglers << "C#{circuit[0]}:#{circuit[1]}"
+      end
     end
+    puts puts_jugglers.join(" ")
   end
 
   def add_juggler_to_circuit(juggler)
     @jugglers << juggler
-    @jugglers.sort_by { |juggler| juggler.choice_circuits[0][1]}
+    @jugglers.sort_by { |juggler| juggler.choice[0]}
+    self.kick_out_jugglers
+  end
+
+  def kick_out_jugglers
+    # puts @jugglers.length
+    if @jugglers.length > max_jugglers
+      juggler = @jugglers.pop
+      juggler.remove_choice
+      @board.jugglers << juggler
+    end
+  end
+
+  def max_jugglers
+    @board.max_number_of_jugglers_per_circuit
   end
 
 end
@@ -53,6 +71,7 @@ class Juggler < Skilz
   def add_skilz_and_choice_circuits(skilz, choice_circuits)
     self.add_skilz(skilz)
     self.add_choice_circuits(choice_circuits)
+    @choice = @choice_circuits.values
   end
 
   def add_choice_circuits(choice_circuits)
@@ -80,12 +99,22 @@ class Juggler < Skilz
     self.board.circuits[circuit_number].all_skilz
   end
 
+  def choice
+    @choice.first
+  end
+
+  def remove_choice
+    puts @choice
+    @choice.unshift
+    puts @choice
+  end
 end
 
 
-class Setup
+class Board
 
   attr_accessor :jugglers, :circuits
+  attr_reader :max_number_of_jugglers_per_circuit
 
   def initialize(file)
     file = file
@@ -97,6 +126,7 @@ class Setup
     counts = file.map{ |line| line[0]}
     ciructs_count = counts.count("C")
     juggers_count = counts.count("J")
+    @max_number_of_jugglers_per_circuit = juggers_count/ciructs_count
     @circuits = Array.new(ciructs_count){ Circuit.new(self) }
     @jugglers = Array.new(juggers_count){ Juggler.new(self) }
   end
@@ -138,14 +168,16 @@ class Course
   attr_accessor :course
 
   def initialize
-    @course = Setup.new(File.readlines("jugglefest_short.txt"))
+    @course = Board.new(File.readlines("jugglefest_short.txt"))
     self.place_jugglers_to_circuits
   end
 
   def place_jugglers_to_circuits
+    puts self.jugglers.length
     self.jugglers.each do |juggler|
-      circuit_number, dot_v = juggler.choice_circuits[0]
+      circuit_number, dot_v = juggler.choice[0]
       add_juggler_to_circuit(circuit_number, juggler)
+      # puts self.jugglers.length
     end
   end
 
@@ -167,11 +199,22 @@ class Course
     circuits_jugglers.add_juggler_to_circuit(juggler)
   end
 
+  def show_jugglers_on_circuit
+    @course.circuits.each do |circuit|
+      circuit.show_jugglers_on_circuit
+    end
+  end
+
 end
 
+#
+# c = Course.new
+# course = c.course
+# puts course.circuits.map { |c| c.hand_eye} == [7,2,7]
+# jugglers = course.jugglers
+# puts jugglers.first.choice_circuits.map{ |k,v| v.last } == [83, 104, 17]
+# puts c.show_jugglers_on_circuit
 
-course = Course.new
-course = course.course
-puts course.circuits.map { |c| c.hand_eye} == [7,2,7]
-jugglers = course.jugglers
-puts jugglers.first.choice_circuits.map{ |k,v| v.last } == [83, 104, 17]
+# C2 J6 C2:128 C1:31 C0:188,  J3 C2:120 C0:171 C1:31,   J10 C0:120 C2:86 C1:21, J0 C2:83 C0:104 C1:17
+# C1 J9 C1:23 C2:86 C0:94,    J8 C1:21 C0:100 C2:80,    J7 C2:75 C1:20 C0:106,  J1 C0:119 C2:74 C1:18
+# C0 J5 C0:161 C2:112 C1:26,  J11 C0:154 C1:27 C2:108,  J2 C0:128 C2:68 C1:18,  J4 C0:122 C2:106 C1:23
