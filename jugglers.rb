@@ -1,14 +1,15 @@
 class Skilz
 
-  attr_reader :hand_eye, :endurance, :pizzaz, :board
+  attr_reader :hand_eye, :endurance, :pizzaz, :board, :number
 
   def initialize(board)
     @board = board
     @hand_eye, @endurance, @pizzaz = 0,0,0
   end
 
-  def add_skilz(skilz)
+  def add_skilz(skilz, number)
     @hand_eye, @endurance, @pizzaz = skilz
+    @number = number
   end
 
   def all_skilz
@@ -28,18 +29,19 @@ class Circuit < Skilz
 
   def show_jugglers_on_circuit
     puts_jugglers = []
-    @jugglers.each_with_index do |juggler, juggler_number|
-      puts_jugglers <<  "j#{juggler_number}"
+    @jugglers.each do |juggler|
+      puts_jugglers <<  "j#{juggler.number}"
       juggler.choice_circuits.each do |choice, circuit|
         puts_jugglers << "C#{circuit[0]}:#{circuit[1]}"
       end
     end
-    puts puts_jugglers.join(" ")
+    puts_jugglers.join(" ")
   end
 
   def add_juggler_to_circuit(juggler)
     @jugglers << juggler
-    @jugglers.sort_by { |juggler| juggler.choice[0]}
+    @jugglers = @jugglers.sort_by { |juggler| juggler.choice[1]}.reverse
+    # puts "post sorted #{@jugglers.map(&:choice)}"
     self.kick_out_jugglers
   end
 
@@ -61,24 +63,25 @@ end
 
 class Juggler < Skilz
 
-  attr_accessor :choice_circuits
+  attr_accessor :choice_circuits, :choice
 
   def initialize(board)
     super
     @choice_circuits = {}
+    @choice = []
   end
 
-  def add_skilz_and_choice_circuits(skilz, choice_circuits)
-    self.add_skilz(skilz)
+  def add_skilz_and_choice_circuits(skilz, number, choice_circuits)
+    self.add_skilz(skilz, number)
     self.add_choice_circuits(choice_circuits)
-    @choice = @choice_circuits.values
   end
 
   def add_choice_circuits(choice_circuits)
     choice_circuits.each_with_index do |circuit_number, index|
       dot_value = get_dot_value(circuit_number.to_i)
-
-      @choice_circuits[index] = [circuit_number, dot_value]
+      value = [circuit_number, dot_value]
+      @choice << value
+      @choice_circuits[index] = value
     end
   end
 
@@ -104,9 +107,7 @@ class Juggler < Skilz
   end
 
   def remove_choice
-    puts @choice
-    @choice.unshift
-    puts @choice
+    @choice = @choice[1..-1]
   end
 end
 
@@ -141,25 +142,19 @@ class Board
 
   def new_circuit(split_line)
     circuit_number, skilz = get_number_and_skilz(split_line)
-    @circuits[circuit_number].add_skilz(skilz)
+    @circuits[circuit_number].add_skilz(skilz, circuit_number)
   end
 
   def new_juggler(split_line)
     juggler_number, skilz = get_number_and_skilz(split_line)
     choice_circuits = split_line[4..-1]
-    @jugglers[juggler_number].add_skilz_and_choice_circuits(skilz, choice_circuits)
+    @jugglers[juggler_number].add_skilz_and_choice_circuits(skilz, juggler_number, choice_circuits)
   end
 
   private
 
   def get_number_and_skilz(split_line)
     [split_line[0].to_i,split_line[1,3].map(&:to_i)]
-  end
-
-  def add_to_array(array, object, count)
-    count.times do
-      array << object(self)
-    end
   end
 end
 
@@ -168,13 +163,14 @@ class Course
   attr_accessor :course
 
   def initialize
-    @course = Board.new(File.readlines("jugglefest_short.txt"))
+    @course = Board.new(File.readlines("jugglefest.txt"))
     self.place_jugglers_to_circuits
   end
 
   def place_jugglers_to_circuits
-    puts self.jugglers.length
     self.jugglers.each do |juggler|
+      # puts "juggler #{juggler}"
+      p juggler.choice_circuits
       circuit_number, dot_v = juggler.choice[0]
       add_juggler_to_circuit(circuit_number, juggler)
       # puts self.jugglers.length
@@ -200,21 +196,21 @@ class Course
   end
 
   def show_jugglers_on_circuit
-    @course.circuits.each do |circuit|
-      circuit.show_jugglers_on_circuit
+    @course.circuits.each_with_index do |circuit, index|
+      puts "C#{index} #{circuit.show_jugglers_on_circuit}"
     end
   end
 
 end
 
-#
-# c = Course.new
-# course = c.course
-# puts course.circuits.map { |c| c.hand_eye} == [7,2,7]
-# jugglers = course.jugglers
-# puts jugglers.first.choice_circuits.map{ |k,v| v.last } == [83, 104, 17]
-# puts c.show_jugglers_on_circuit
 
-# C2 J6 C2:128 C1:31 C0:188,  J3 C2:120 C0:171 C1:31,   J10 C0:120 C2:86 C1:21, J0 C2:83 C0:104 C1:17
-# C1 J9 C1:23 C2:86 C0:94,    J8 C1:21 C0:100 C2:80,    J7 C2:75 C1:20 C0:106,  J1 C0:119 C2:74 C1:18
+c = Course.new
+course = c.course
+puts course.circuits.map { |c| c.hand_eye} == [7,2,7]
+jugglers = course.jugglers
+puts jugglers.first.choice_circuits.map{ |k,v| v.last } == [83, 104, 17]
+puts c.show_jugglers_on_circuit
+
 # C0 J5 C0:161 C2:112 C1:26,  J11 C0:154 C1:27 C2:108,  J2 C0:128 C2:68 C1:18,  J4 C0:122 C2:106 C1:23
+# C1 J9 C1:23 C2:86 C0:94,    J8 C1:21 C0:100 C2:80,    J7 C2:75 C1:20 C0:106,  J1 C0:119 C2:74 C1:18
+# C2 J6 C2:128 C1:31 C0:188,  J3 C2:120 C0:171 C1:31,   J10 C0:120 C2:86 C1:21, J0 C2:83 C0:104 C1:17
