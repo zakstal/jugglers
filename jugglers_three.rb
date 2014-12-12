@@ -32,9 +32,13 @@ module Helpers
     sc("Welcome to Jugglefest!",space)
     puts ""
     op("Place teams","p",space)
-    op("View placed teams","v",space)
-    op("See a circuit","c",space)
-    op("Get circuit 1970's J value", "j",space)
+
+    if @teams_placed
+      op("View placed teams","v",space)
+      op("See a circuit","c",space)
+      op("Get circuit 1970's J value", "j",space)
+    end
+
     op("exit","e",space)
     puts ""
     sc("Enter option >>",0)
@@ -54,21 +58,27 @@ module Helpers
     sc("Enter circuit number",10)
     puts ""
     number = gets.chomp
-    puts course.circuits(number).show_jugglers_on_circuit
-    puts_options("")
+    puts_option(course.circuits(number.to_i).show_jugglers_on_circuit)
   end
 
   def choices(course)
     choice = ""
+    @teams_placed = false
     start_screen
     until choice == "e"
       choice = gets.chomp
       case choice
       when "p"
         course.place_teams
+        @teams_placed = true
         puts_option("Teams have been placed")
       when "v"
-        puts_option(course.show_jugglers_on_circuit)
+        begin
+          course.show_jugglers_on_circuit
+        rescue => e
+          puts "thats not a circuit"
+        end
+        puts_option("")
       when "c"
         get_circuit(course)
       when "j"
@@ -119,11 +129,12 @@ class Circuit < Skilz
 
   def show_jugglers_on_circuit
     puts_jugglers = []
-    @jugglers.each do |juggler|
+    @jugglers.each_with_index do |juggler, i|
       puts_jugglers <<  "j#{juggler.number}"
       juggler.choice_circuits.each do |choice, circuit|
         puts_jugglers << "C#{circuit[0]}:#{circuit[1]}"
       end
+      puts_jugglers << " -- " if i != @jugglers.length - 1
     end
     puts_jugglers.join(" ")
   end
@@ -303,12 +314,19 @@ class Course
     puts "there are #{self.jugglers.length} jugglers to be placed"
   end
 
-  def show_jugglers_on_circuit
+  def get_all_circuits
     all_circuits = []
     @dm.circuits.each_with_index do |circuit, index|
       all_circuits << "C#{index} #{circuit.show_jugglers_on_circuit}"
     end
-    all_circuits.join(" ")
+    all_circuits
+  end
+
+  def show_jugglers_on_circuit
+    self.get_all_circuits.each do |circuit|
+      puts circuit
+      puts "\n\n\n\n\n"
+    end
   end
 
   def get_j_value_of_1970
