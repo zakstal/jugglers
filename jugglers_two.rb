@@ -1,5 +1,3 @@
-
-
 class Skilz
 
   attr_reader :hand_eye, :endurance, :pizzaz, :board, :number
@@ -26,40 +24,42 @@ class Circuit < Skilz
 
   def initialize(board)
     super
-    @jugglers = []
+    @jugglers = {}
   end
 
   def show_jugglers_on_circuit
-    puts_jugglers = []
-    @jugglers.each do |juggler|
-      puts_jugglers <<  "j#{juggler.number}"
-      juggler.choice_circuits.each do |choice, circuit|
-        puts_jugglers << "C#{circuit[0]}:#{circuit[1]}"
-      end
+    output = []
+    first = self.jugglers[1].sort_by { |juggler| juggler.choice_circuits[0][1] }.reverse
+    first.each do |juggler|
+      output << juggler.print_choices
     end
-    puts_jugglers.join(" ")
+    output.join(" --- ")
   end
 
   def add_juggler_to_circuit(juggler)
-    @jugglers << juggler
-    @jugglers = @jugglers.sort_by { |juggler| juggler.choice[1]}.reverse
-    # puts "post sorted #{@jugglers.map(&:choice)}"
-    self.kick_out_jugglers
+    juggler.choices.each_with_index do |choice_array, index|
+      if choice_array[0].to_i == self.number
+        if self.jugglers[index].nil?
+           self.jugglers[index] = [juggler]
+         else
+            self.jugglers[index] << juggler
+            self.jugglers[index] = self.jugglers[index].sort { |juggler_one, juggler_two| juggler_two.choice_circuits[index][1] <=> juggler_two.choice_circuits[index][1] }
+          end
+      end
+    end
   end
 
-  def kick_out_jugglers
-    # puts @jugglers.length
-    if @jugglers.length > max_jugglers
-      # print "last juggler #{@jugglers.last.to_s}"
-      length_of_cs =  @board.circuits.select do |c|
-        c.jugglers.length < 6 #if c.jugglers.uniq.length != c.jugglers.length
-      end
-      # print length_of_cs.length
-      # print "\n\n\n\n"
-      juggler = @jugglers.pop
-      juggler.remove_choice
-      @board.jugglers << juggler
-    end
+  # def kick_out_jugglers
+  #   # puts @jugglers.length
+  #   if @jugglers.length > max_jugglers
+  #     juggler = @jugglers.pop
+  #     juggler.remove_choice
+  #     @board.jugglers << juggler
+  #   end
+  # end
+
+  def juggler_choices()
+
   end
 
   def max_jugglers
@@ -77,6 +77,14 @@ class Juggler < Skilz
     super
     @choice_circuits = {}
     @choice = []
+  end
+
+  def print_choices
+    output = ["J#{self.number}"]
+    self.choice.each do |choice|
+      output << "C#{choice[0]}:#{choice[1]}"
+    end
+    output.join(" ")
   end
 
   def add_skilz_and_choice_circuits(skilz, number, choice_circuits)
@@ -113,17 +121,13 @@ class Juggler < Skilz
   def all_choice
     @choice
   end
-  def choice
-    @choice.first
+  def choices
+    @choice_circuits.values
   end
 
   def remove_choice
     @choice.shift if @choice.length > 1
     # @choice = @choice_circuits.values if @choice.empty?
-  end
-
-  def to_s
-    self.number
   end
 end
 
@@ -144,7 +148,6 @@ class Board
     ciructs_count = counts.count("C")
     juggers_count = counts.count("J")
     @max_number_of_jugglers_per_circuit = juggers_count/ciructs_count
-    puts @max_number_of_jugglers_per_circuit
     @circuits = Array.new(ciructs_count){ Circuit.new(self) }
     @jugglers = Array.new(juggers_count){ Juggler.new(self) }
   end
@@ -185,26 +188,23 @@ class Course
   end
 
   def place_jugglers_to_circuits
-    # self.jugglers.each do |juggler|
-    #   circuit_number, dot_v = juggler.choice[0]
-    #   add_juggler_to_circuit(circuit_number, juggler)
-    # end
+
     leftover = []
     until self.jugglers.empty?
-      # puts self.jugglers.length
+      puts self.jugglers.length
       juggler = self.jugglers.shift
-      if juggler.number == 4016
-        puts "juggler 4016 choices #{juggler.all_choice}"
-        puts "circuit # #{self.circuits(1889).jugglers.map{ |j| j.choice}}"
+      juggler.choices.each do |choice_circuit_number, dot_value|
+        add_juggler_to_circuit(choice_circuit_number.to_i, juggler)
       end
-      # puts juggler.choice.length
-      # if juggler.choice.length == 1
-      #   leftover << juggler
-      # else
-        circuit_number, dot_v = juggler.choice[0]
-      # end
-      add_juggler_to_circuit(circuit_number, juggler)
     end
+    #   puts juggler.choice.length
+    #   if juggler.choice.length == 1
+    #     leftover << juggler
+    #   else
+    #     circuit_number, dot_v = juggler.choice[0]
+    #   end
+    #   add_juggler_to_circuit(circuit_number, juggler)
+    # end
   end
 
   def jugglers(*juggler_number)
@@ -232,9 +232,8 @@ class Course
   end
 
   def circuit_length
-     self.circuits.each { |c| puts "circuit number #{c.number}" if c.jugglers.length < 6 }
+    self.circuits.each { |c| puts "circuit number #{c.number}" if c.jugglers.length < 6 }
   end
-
 end
 
 
@@ -246,5 +245,9 @@ jugglers = course.jugglers
 c.show_jugglers_on_circuit
 
 # C0 J5 C0:161 C2:112 C1:26,  J11 C0:154 C1:27 C2:108,  J2 C0:128 C2:68 C1:18,  J4 C0:122 C2:106 C1:23
+# C1 J9 C1:23 C2:86 C0:94,    J8 C1:21 C0:100 C2:80,    J7 C2:75 C1:20 C0:106,  J1 C0:119 C2:74 C1:18
+# C2 J6 C2:128 C1:31 C0:188,  J3 C2:120 C0:171 C1:31,   J10 C0:120 C2:86 C1:21, J0 C2:83 C0:104 C1:17
+
+# C0 J5 C0:161 C2:112 C1:26,  J11 C0:154 C1:27 C2:108,  J2 C0:128 C2:68 C1:18,  J10 C0:120 C2:86 C1:2 J4 C0:122 C2:106 C1:23 J1 C0:119 C2:74 C1:18 J3 C2:120 C0:171 C1:31, J0 C2:83 C0:104 C1:17 J8 C1:21 C0:100 C2:80,  C2 J6 C2:128 C1:31 C0:188, J7 C2:75 C1:20 C0:106,
 # C1 J9 C1:23 C2:86 C0:94,    J8 C1:21 C0:100 C2:80,    J7 C2:75 C1:20 C0:106,  J1 C0:119 C2:74 C1:18
 # C2 J6 C2:128 C1:31 C0:188,  J3 C2:120 C0:171 C1:31,   J10 C0:120 C2:86 C1:21, J0 C2:83 C0:104 C1:17
