@@ -71,7 +71,7 @@ module Helpers
       when "p"
         course.place_teams
         @teams_placed = true
-        puts_option("Teams have been placed")
+        puts_option("Teams have been placed. it took #{course.time}")
       when "v"
         begin
           course.show_jugglers_on_circuit
@@ -255,14 +255,16 @@ end
 
 class Course
   include Helpers
-  attr_accessor :Dm
+  attr_accessor :Dm, :time
 
   def initialize
+    @time = Time.now
     @dm = Dm.new(File.readlines("jugglefest.txt"))
   end
 
   def place_teams
     self.place_jugglers_to_circuits while !self.jugglers.empty?
+    @time = Time.now - @time
   end
 
   def jugglers(*juggler_number)
