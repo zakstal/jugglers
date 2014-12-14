@@ -324,15 +324,6 @@ end
       end
     end
 
-    # def remove_excess_jugglers_from_all_circuits
-    #   max = @dm.max_number_of_jugglers_per_circuit
-    #   self.circuits.each do |circuit|
-    #     self.add_jugglers_greater_than_max_back_to_dmjugglers( circuit, max ) if circuit.jugglers.length > max
-    #   end
-    #
-    #   self.promote_jugglers_next_prefered_choice
-    # end
-
     def puts_jugglers_remaining_to_be_placed
       clear_screen
       puts "there are #{self.jugglers.length} jugglers to be placed"
