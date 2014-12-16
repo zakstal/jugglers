@@ -44,24 +44,26 @@ module Helpers
     sc("Enter option >>",0)
   end
 
-  def puts_option(words)
+  def puts_option( words )
     clear_screen
-    sc(words,10)
+    sc( words,10 )
     puts ""
-    sc("Press Enter to return",0)
+    sc( "Press Enter to return",0 )
     gets
     start_screen
   end
 
-  def get_circuit(course)
+  def get_circuit( course )
     clear_screen
-    sc("Enter circuit number",10)
+    sc( "Enter circuit number",10 )
     puts ""
     number = gets.chomp
-    puts_option(course.circuits(number.to_i).show_jugglers_on_circuit)
+    puts course.circuits( number.to_i ).show_jugglers_on_circuit
+    puts_options( "" )
+
   end
 
-  def choices(course)
+  def choices( course )
     choice = ""
     @teams_placed = false
     start_screen
@@ -227,29 +229,29 @@ class Dm
     @jugglers = Array.new(juggers_count){ Juggler.new(self) }
   end
 
-  def create_circuts_and_jugglers(file)
+  def create_circuts_and_jugglers( file )
     file.each do |line|
-      split_line = line.scan(/\d+/)
+      split_line = line.scan( /\d+/ )
       new_circuit(split_line) if line[0] == "C"
       new_juggler(split_line) if line[0] == "J"
     end
   end
 
-  def new_circuit(split_line)
-    circuit_number, skilz = get_number_and_skilz(split_line)
+  def new_circuit( split_line )
+    circuit_number, skilz = get_number_and_skilz( split_line )
     @circuits[circuit_number].add_skilz(skilz, circuit_number)
   end
 
-  def new_juggler(split_line)
-    juggler_number, skilz = get_number_and_skilz(split_line)
+  def new_juggler( split_line )
+    juggler_number, skilz = get_number_and_skilz( split_line )
     choice_circuits = split_line[4..-1]
-    @jugglers[juggler_number].add_skilz_and_choice_circuits(skilz, juggler_number, choice_circuits)
+    @jugglers[juggler_number].add_skilz_and_choice_circuits( skilz, juggler_number, choice_circuits )
   end
 
   private
 
-  def get_number_and_skilz(split_line)
-    [split_line[0].to_i,split_line[1,3].map(&:to_i)]
+  def get_number_and_skilz( split_line )
+    [split_line[0].to_i,split_line[1,3].map( &:to_i )]
   end
 end
 
@@ -258,6 +260,7 @@ class Course
   attr_accessor :Dm, :time
 
   def initialize
+
     @time = Time.now
     @dm = Dm.new(File.readlines("jugglefest.txt"))
   end
@@ -267,15 +270,15 @@ class Course
     @time = Time.now - @time
   end
 
-  def jugglers(*juggler_number)
+  def jugglers( *juggler_number )
     juggler_number.empty? ? @dm.jugglers : @dm.jugglers[juggler_number.first]
   end
 
-  def circuits(*circuit_number)
+  def circuits( *circuit_number )
     circuit_number.empty? ? @dm.circuits : @dm.circuits[circuit_number.first]
   end
 
-  def add_juggler_to_circuit(juggler)
+  def add_juggler_to_circuit( juggler )
     circuit_number, dot_v = juggler.choice[0]
     circuits_jugglers = circuits[circuit_number.to_i]
     circuits_jugglers.add_juggler_to_circuit(juggler)
@@ -319,7 +322,9 @@ class Course
   def get_all_circuits
     all_circuits = []
     @dm.circuits.each_with_index do |circuit, index|
-      all_circuits << "C#{index} #{circuit.show_jugglers_on_circuit}"
+      circuit = "C#{index} #{circuit.show_jugglers_on_circuit}"
+      puts circuit
+      all_circuits << circuit
     end
     all_circuits
   end
