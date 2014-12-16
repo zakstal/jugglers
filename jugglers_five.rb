@@ -156,6 +156,7 @@ class Circuit
   end
 
   def switch_worst_juggler_with_new_juggler(juggler)
+
     self.jugglers.last.remove_current_top_choice
       @dm.jugglers[-1] = self.jugglers.last
     self.add_juggler_to_appropriate_location( juggler )
@@ -166,6 +167,7 @@ class Circuit
       juggler.remove_current_top_choice
     else
       self.switch_worst_juggler_with_new_juggler(juggler)
+
     end
   end
 
