@@ -1,7 +1,8 @@
 
 triangle = File.readlines( "triangle.txt" )
 
-def parse_bottom_two_rows( second_to_last_row, last_row )
+def get_greatest_inls
+  _bottom_two_rows( second_to_last_row, last_row )
   row_length = second_to_last_row.length
   new_last_row = Array.new( row_length, nil )
 
@@ -21,7 +22,8 @@ def get_greatest_route_qty( triangle )
   until i == 0
     second_to_last_row = triangle[i - 1]
     last_row = triangle[i]
-    triangle[i - 1] = parse_bottom_two_rows( second_to_last_row, last_row )
+    triangle[i - 1] = get_greatest_inls
+    _bottom_two_rows( second_to_last_row, last_row )
     i -= 1
   end
     p triangle.first.first

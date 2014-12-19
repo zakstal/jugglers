@@ -275,7 +275,6 @@ class Dm
   attr_reader :max_number_of_jugglers_per_circuit
 
   def initialize( file )
-    file = file
     make_arrays( file )
     create_circuts_and_jugglers( file )
   end
