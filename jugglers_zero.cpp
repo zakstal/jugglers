@@ -3,10 +3,11 @@
 #include <sstream>
 #include <vector>
 #include <algorithm>
+
 using namespace std;
-const int circuit_count = 2000;
-const int max_jugglers_per_circuit = 6;
-const int choice_count = 6;
+const int circuit_count = 3;
+const int max_jugglers_per_circuit = 4;
+const int choice_count = 3;
 
 class SkilzInterface{};
 
@@ -19,6 +20,8 @@ class JugglerInterface
     virtual void remove_current_top_choice() {};
     virtual int dot_value() {};
     virtual int* first_choice() {};
+    int choice;
+    JugglerInterface() : choice( 0 ) {};
     //add all prototype functions to here
 };
 
@@ -39,32 +42,33 @@ class Dm
     std::vector<JugglerInterface> jugglers;
     CircuitInterface circuits[circuit_count];
     Dm( std::ifstream& );
-    void new_circuit( std::istringstream&);
-    void new_juggler( std::istringstream&);
+    void new_circuit( std::string&);
+    void new_juggler( std::string&);
     int* get_skilz( std::istringstream& );
     int* get_choice_circuits( std::istringstream&  );
 };
 
 Dm::Dm( std::ifstream& file ) : NILJUGGLER() {
+
   int skilz[3] = {0,0,0};
   int circuit_choices[6] = { -1, -1, -1, -1, -1, -1 };
   NILJUGGLER.add_skilz_and_choice_circuits( skilz, -1, circuit_choices );
   std::string line;
-  std::string letter;
+  char letter;
   while (getline(file, line)) {
-    std::istringstream iss(line);
-    iss >> letter;
-    if (letter == "C") {
-      new_circuit( iss );
-    } else if ( letter == "J") {
-      new_juggler( iss );
+    letter = line[0];
+    if (letter == 'C') {
+      new_circuit( line );
+    } else if ( letter == 'J') {
+      new_juggler( line );
     }
   }
+
   return;
 };
 
-void Dm::new_circuit( std::istringstream& iss ){
-
+void Dm::new_circuit( std::string& line ){
+  std::istringstream iss(line);
   std::string str;
   int circuit_num;
   iss >> str;
@@ -80,13 +84,29 @@ void Dm::new_circuit( std::istringstream& iss ){
   return;
 };
 
-void Dm::new_juggler( std::istringstream& iss ){
+int* Dm::get_choice_circuits( std::istringstream& iss ){
+  int c_circuits[choice_count];
+  int num;
+  int i = 0;
+  cout << "iss " << iss << endl;
+  while (iss >> num ){
+    cout << "num " << num << endl;
+    c_circuits[i] = num;
+    i++;
+  }
+  return c_circuits;
+};
+
+void Dm::new_juggler( std::string& line ){
+  std::istringstream iss(line);
   std::string str;
   int juggler_num;
+  iss >> str;
   iss >> str;
   juggler_num = std::atoi(str.substr(1,str.size() - 1).c_str());
   int* skilz = get_skilz( iss );
   int* choice_circuits = get_choice_circuits( iss );
+  cout << "choice circuits " << *choice_circuits << endl;
   JugglerInterface juggler;
   juggler.number = juggler_num;
   juggler.add_skilz_and_choice_circuits(skilz, juggler_num, choice_circuits);
@@ -107,81 +127,6 @@ int* Dm::get_skilz( std::istringstream& iss ){
 
 
 
-class Course
-
-{
-  public:
-    Dm dm;
-    Course( std::ifstream& file ) : dm( file ) {};
-    void place_teams();
-    std::vector<JugglerInterface> jugglers();
-    CircuitInterface* circuits();
-    void add_juggler_to_circuit( JugglerInterface );
-};
-
-//
-//
-// Course::Course( std::ifstream file ){
-//
-// };
-//
-void Course::place_teams(){
-  JugglerInterface juggler;
-
-  while (jugglers().size() != 0){
-    juggler = jugglers()[jugglers().size() - 1];
-    add_juggler_to_circuit( juggler );
-  }
-  return;
-};
-
-std::vector<JugglerInterface> Course::jugglers(){
-  return dm.jugglers;
-};
-
-CircuitInterface* Course::circuits(){
-  return dm.circuits;
-};
-
-void Course::add_juggler_to_circuit( JugglerInterface juggler ){
-  int circuit_number = juggler.first_choice()[0];
-  CircuitInterface circuit = circuits()[circuit_number];
-  circuit.add_juggler_to_circuit( juggler );
-  return;
-};
-
-// def puts_jugglers_remaining_to_be_placed
-// clear_screen
-// puts "there are #{self.jugglers.length} jugglers to be placed"
-// end
-//
-// def get_all_circuits
-// all_circuits = []
-// @dm.circuits.each_with_index do |circuit, index|
-// all_circuits << "C#{index} #{circuit.show_jugglers_on_circuit}"
-// end
-// all_circuits
-// end
-//
-// def show_jugglers_on_circuit
-// self.get_all_circuits.each do |circuit|
-// puts circuit
-// puts "\n\n\n\n\n"
-// end
-// end
-//
-// def get_j_value_of_1970
-// self.circuits( 1970 ).jugglers.map( &:number ).inject( :+ )
-// end
-//
-
-
-
-
-
-
-
-
 
 class Skilz: public SkilzInterface
 
@@ -195,11 +140,6 @@ class Skilz: public SkilzInterface
       void add_skilz( int, int, int);
       int* all_skilz();
 };
-
-// Skilz::Skilz( Dm md ) {
-//   dm = md;
-//   return;
-// };
 
 void Skilz::add_skilz(int h, int p, int e) {
   hand_eye = h;
@@ -222,6 +162,7 @@ class Juggler : public Skilz, public JugglerInterface
     int choice_numbers[choice_count];
     int dot_value();
     int* first_choice();
+    Juggler( Dm md ) : Skilz( md ), JugglerInterface() {};
     void remove_current_top_choice();
     void add_choice_circuits( int* );
     void add_skilz_and_choice_circuits( int*, int, int* );
@@ -231,6 +172,8 @@ class Juggler : public Skilz, public JugglerInterface
 };
 
 int* Juggler::first_choice() {
+  cout << "choice " << choice << endl;
+  cout << "choice circuits first choice in here" << choice_circuits[0][0] << " " << choice_circuits[0][1] << endl;
   return choice < 6 ? choice_circuits[choice] : other_choices[ choice - 6 ];
 };
 
@@ -255,7 +198,7 @@ void Juggler::add_circuit_dot_p( CircuitInterface* ){
     i++;
   }
 
-  std::sort(std::begin(other_choices), std::end(other_choices), sort_other_choices);
+  std::sort(other_choices, other_choices + (circuit_count - choice_count), sort_other_choices);
   return;
 };
 
@@ -280,7 +223,7 @@ void Juggler::add_skilz_and_choice_circuits( int* s, int n, int* cc ){
   add_choice_circuits( cc );
 
   int i = 0;
-  while (i < sizeof(choice_numbers)){
+  while (i < circuit_count){
     choice_numbers[i] = cc[i];
     i++;
   }
@@ -305,7 +248,7 @@ int Juggler::get_dot_value( int circuit_number){
   //maybe make into global arrays
   int total = 0;
   int i = 0;
-  while (i < sizeof(circuit)) {
+  while (i < 3) {
     total += ( circuit[i] * skilz[i] );
     i += 1;
   }
@@ -317,21 +260,20 @@ class Circuit : public Skilz, public CircuitInterface
 {
   public:
     Dm dm;
-    Circuit( Dm md ) : Skilz( md ), dm( md ){};
+    Circuit(Dm md);
     int max_jugglers();
-    void add_juggler_to_circuit( JugglerInterface );
+    void add_juggler_to_circuit( Juggler );
     bool not_nil_and_new_juggler_is_better( Juggler, int );
-    void switch_worst_juggler_with_new_juggler(JugglerInterface);
-    void replace_worst_juggler_if_new_juggler_is_better( JugglerInterface );
+    void switch_worst_juggler_with_new_juggler(Juggler);
+    void replace_worst_juggler_if_new_juggler_is_better( Juggler );
     void show_jugglers_on_circuit();
 
 };
 
-Circuit::Circuit( Dm md) {
-  dm( md );
+Circuit::Circuit( Dm md ) : Skilz(md), dm(md) {
   int i = 0;
   while (i < max_jugglers()) {
-    jugglers[i] = 0;
+    jugglers[i] = dm.NILJUGGLER;
     i++;
   };
 };
@@ -340,7 +282,7 @@ int Circuit::max_jugglers() {
   return max_jugglers_per_circuit;
 };
 
-bool sort_by_dot_value( JugglerInterface& j1, JugglerInterface& j2 ){
+bool sort_by_dot_value( Juggler& j1, Juggler& j2 ){
   return j1.dot_value() > j2.dot_value();
 };
 
@@ -348,16 +290,16 @@ bool Circuit::not_nil_and_new_juggler_is_better( Juggler j, int i ){
   return (jugglers[i - 1].number != -1 ) && (j.dot_value() < jugglers[i - 1].dot_value());
 };
 
-void Circuit::switch_worst_juggler_with_new_juggler( JugglerInterface j ){
-  jugglers[sizeof(jugglers) -1].remove_current_top_choice();
-  dm.jugglers[sizeof(jugglers) -1] = jugglers[sizeof(jugglers) -1];
-  jugglers[sizeof(jugglers) -1] = j;
+void Circuit::switch_worst_juggler_with_new_juggler( Juggler j ){
+  jugglers[max_jugglers_per_circuit -1].remove_current_top_choice();
+  dm.jugglers[dm.jugglers.size() -1] = jugglers[max_jugglers_per_circuit -1];
+  jugglers[max_jugglers_per_circuit -1] = j;
   std::sort(std::begin(jugglers), std::end(jugglers), sort_by_dot_value);
   return;
 };
 
-void Circuit::replace_worst_juggler_if_new_juggler_is_better( JugglerInterface j ){
-  if (jugglers[sizeof(jugglers) -1].dot_value() > j.dot_value()) {
+void Circuit::replace_worst_juggler_if_new_juggler_is_better( Juggler j ){
+  if (jugglers[max_jugglers_per_circuit -1].dot_value() > j.dot_value()) {
     j.remove_current_top_choice();
   } else {
      switch_worst_juggler_with_new_juggler( j );
@@ -365,14 +307,15 @@ void Circuit::replace_worst_juggler_if_new_juggler_is_better( JugglerInterface j
   return;
 };
 
-void Circuit::add_juggler_to_circuit( JugglerInterface j ){
-  if ( jugglers[sizeof(jugglers) -1].number != -1 ){
+void Circuit::add_juggler_to_circuit( Juggler j ){
+  if ( jugglers[max_jugglers_per_circuit -1].number != -1 ){
     replace_worst_juggler_if_new_juggler_is_better( j );
   } else {
     dm.jugglers.pop_back();
     //it may call the destructor function on the popped element
-    jugglers[sizeof(jugglers) -1]  = j;
-    sort(jugglers, jugglers + sizeof(jugglers), sort_by_dot_value);
+    jugglers[max_jugglers_per_circuit -1]  = j;
+    sort(begin(jugglers), end(jugglers), sort_by_dot_value);
+    //KC says: We might have to do jugglers + max_jugglers_per_circuit there.
   }
   return;
 };
@@ -380,17 +323,108 @@ void Circuit::add_juggler_to_circuit( JugglerInterface j ){
 void Circuit::show_jugglers_on_circuit(){
   int i = 0;
   int j = 0;
-  while (i < sizeof(jugglers)) {
+  while (i < max_jugglers_per_circuit) {
     std::cout << "j" << jugglers[i].number << " ";
     while (j < sizeof(jugglers[i].choice_circuits)) {
+      //KC says: The above line probably won't work. Not sure though or what to replace it with.
+      //         Also is this the only display function we have so far?
       std::cout << "C" << jugglers[i].choice_circuits[j][0] << ":" << jugglers[i].choice_circuits[j][1] << " ";
       j++;
     };
-    if (i < sizeof(jugglers) - 1) {
+    if (i < max_jugglers_per_circuit - 1) {
       std::cout << " -- ";
     }
     i++;
     j = 0;
   }
   std::cout << std::endl;
+};
+
+class Course
+
+{
+public:
+  Dm dm;
+  Course( std::ifstream& file ) : dm( file ) {};
+  void place_teams();
+  std::vector<JugglerInterface> jugglers();
+  CircuitInterface* circuits();
+  void add_juggler_to_circuit( JugglerInterface );
+  int get_j_value_of_1970();
+};
+
+//
+//
+// Course::Course( std::ifstream file ){
+//
+// };
+//
+void Course::place_teams(){
+  while (jugglers().size() != 0){
+    cout << "SIZE OF JUGGLERS!! " << jugglers().size() << endl;
+    // *juggler = jugglers()[jugglers().size() - 1];
+    add_juggler_to_circuit( jugglers()[jugglers().size() - 1] );
+  }
+  return;
+};
+
+std::vector<JugglerInterface> Course::jugglers(){
+  return dm.jugglers;
+};
+
+CircuitInterface* Course::circuits(){
+  return dm.circuits;
+};
+
+void Course::add_juggler_to_circuit( JugglerInterface juggler ){
+  cout << "juggler choice " << juggler.choice << endl;
+  int circuit_number = juggler.first_choice()[0];
+  cout << "circuit number " << circuit_number << endl;
+  CircuitInterface circuit = circuits()[circuit_number];
+  circuit.add_juggler_to_circuit( juggler );
+  return;
+};
+
+int Course::get_j_value_of_1970(){
+  CircuitInterface circuit1970 = dm.circuits[ 1 ];
+  int total = 0;
+  int i = 0;
+  while ( i < max_jugglers_per_circuit) {
+    total += circuit1970.jugglers[i].number;
+    i++;
+  }
+  return total;
+};
+
+// def puts_jugglers_remaining_to_be_placed
+// clear_screen
+// puts "there are #{self.jugglers.length} jugglers to be placed"
+// end
+//
+// def get_all_circuits
+// all_circuits = []
+// @dm.circuits.each_with_index do |circuit, index|
+// all_circuits << "C#{index} #{circuit.show_jugglers_on_circuit}"
+// end
+// all_circuits
+// end
+//
+// def show_jugglers_on_circuit
+// self.get_all_circuits.each do |circuit|
+// puts circuit
+// puts "\n\n\n\n\n"
+// end
+// end
+//
+
+//
+
+
+int main() {
+  ifstream stream("jugglefest_short.txt");
+  Course c(stream);
+  c.place_teams();
+  cout << "not here" << endl;
+  cout << c.get_j_value_of_1970() << endl;
+  return 0;
 };
