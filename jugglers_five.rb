@@ -306,6 +306,7 @@ class Dm
     juggler_number, skilz = get_number_and_skilz( split_line )
     choice_circuits = split_line[4..-1]
     self.jugglers[juggler_number].add_skilz_and_choice_circuits(skilz, juggler_number, choice_circuits)
+    #pass in circuit objects inseated of numbers. the juggler should not be finding the circuits
   end
 
   private
