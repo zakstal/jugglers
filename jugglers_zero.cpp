@@ -42,11 +42,6 @@ class DmInterface
 
 class SkilzInterface{};
 
-
-
-
-
-
 class Skilz: public SkilzInterface
 
 {
@@ -55,7 +50,7 @@ public:
   int pizzazz;
   int endurance;
   DmInterface dm;
-  Skilz( DmInterface md ) : dm( md ) {};
+  Skilz() {};
   void add_skilz( int, int, int);
   int* all_skilz();
 };
@@ -82,13 +77,7 @@ public:
   int choice_numbers[choice_count];
   int dot_value();
   int* first_choice();
-  Juggler( DmInterface md ) : Skilz( md ), JugglerInterface() {};
-  void remove_current_top_choice( DmInterface& );
-  void add_choice_circuits( int*, DmInterface& );
-  void add_skilz_and_choice_circuits( int*, int, int*, DmInterface& dm );
-  void add_circuit_dot_p( CircuitInterface*, DmInterface& );
-  int* circuit_skilz( int, DmInterface& );
-  int get_dot_value( int, DmInterface& );
+  Juggler() : Skilz(), JugglerInterface() {};
 };
 
 int* Juggler::first_choice() {
@@ -105,75 +94,8 @@ bool sort_other_choices( int* r1, int* r2){
   return r1[1] > r2[1];
 };
 
-void Juggler::add_circuit_dot_p( CircuitInterface*, DmInterface& dm ){
-  int skipped = 0;
-  int i = 0;
-  while (i < circuit_count) {
-    if (std::find(std::begin(choice_numbers), std::end(choice_numbers), i) != std::end(choice_numbers)){
-      skipped++;
-      continue;
-    }
-    int values[2] = { i, get_dot_value( i, dm ) };
-    other_choices[i - skipped] = values;
-    i++;
-  }
-
-  std::sort(other_choices, other_choices + (circuit_count - choice_count), sort_other_choices);
-  return;
-};
 
 
-
-void Juggler::add_choice_circuits( int* circuit_nums, DmInterface& dm ){
-  int i = 0;
-  while (i < sizeof(circuit_nums)) {
-    int circuit_num = circuit_nums[i];
-    int dot_value = get_dot_value( circuit_num, dm );
-    int value[2] = {circuit_num, dot_value};
-
-    choice_circuits[i] = value;
-    i++ ;
-  }
-  return;
-};
-
-void Juggler::add_skilz_and_choice_circuits( int* s, int n, int* cc, DmInterface& dm ){
-  number = n;
-  add_skilz( s[0], s[1], s[2]);
-  add_choice_circuits( cc, dm );
-
-  int i = 0;
-  while (i < circuit_count){
-    choice_numbers[i] = cc[i];
-    i++;
-  }
-  return;
-};
-
-void Juggler::remove_current_top_choice( DmInterface& dm ){
-  choice++;
-  if (choice == 6){
-    add_circuit_dot_p( dm.circuits, dm );
-  }
-  return;
-};
-
-int* Juggler::circuit_skilz( int circuit_number, DmInterface& dm ) {
-  return dm.circuits[ circuit_number ].all_skilz();
-};
-
-int Juggler::get_dot_value( int circuit_number, DmInterface& dm){
-  int* circuit = circuit_skilz( circuit_number, dm );
-  int* skilz = all_skilz();
-  //maybe make into global arrays
-  int total = 0;
-  int i = 0;
-  while (i < 3) {
-    total += ( circuit[i] * skilz[i] );
-    i += 1;
-  }
-  return total;
-};
 
 
 class Dm : public DmInterface
@@ -183,16 +105,22 @@ class Dm : public DmInterface
     std::vector<Juggler> jugglers;
     CircuitInterface circuits[circuit_count];
     Dm( std::ifstream& );
+    void remove_current_top_choice( Juggler& );
+    void add_circuit_dot_p( CircuitInterface*, Juggler& );
+    int get_dot_value( int, Juggler& );
+    void add_choice_circuits( int*, Juggler& );
+    void add_skilz_and_choice_circuits( int*, int, int*, Juggler&  );
     void new_circuit( std::string&);
     void new_juggler( std::string&);
     int* get_skilz( std::istringstream& );
     int* get_choice_circuits( std::istringstream&  );
 };
 
+
 Dm::Dm( std::ifstream& file ) : NILJUGGLER( *this ) {
   int skilz[3] = {0,0,0};
   int circuit_choices[6] = { -1, -1, -1, -1, -1, -1 };
-  NILJUGGLER.add_skilz_and_choice_circuits( skilz, -1, circuit_choices, *this );
+  add_skilz_and_choice_circuits( skilz, -1, circuit_choices, NILJUGGLER );
   std::string line;
   char letter;
   while (getline(file, line)) {
@@ -206,6 +134,75 @@ Dm::Dm( std::ifstream& file ) : NILJUGGLER( *this ) {
 
   return;
 };
+
+
+void Dm::add_skilz_and_choice_circuits( int* s, int n, int* cc, Juggler& juggler ){
+  juggler.number = n;
+  juggler.add_skilz( s[0], s[1], s[2]);
+  add_choice_circuits( cc, juggler );
+
+  int i = 0;
+  while (i < circuit_count){
+    juggler.choice_numbers[i] = cc[i];
+    i++;
+  }
+  return;
+};
+
+void Dm::add_choice_circuits( int* circuit_nums, Juggler& juggler ){
+  int i = 0;
+  while (i < sizeof(circuit_nums)) {
+    int circuit_num = circuit_nums[i];
+    int dot_value = get_dot_value( circuit_num, juggler );
+    int value[2] = {circuit_num, dot_value};
+
+    juggler.choice_circuits[i] = value;
+    i++ ;
+  }
+  return;
+};
+
+
+int Dm::get_dot_value( int circuit_number, Juggler& juggler){
+  int* circuit = circuits[ circuit_number ].all_skilz();
+  int* skilz = juggler.all_skilz();
+  //maybe make into global arrays
+  int total = 0;
+  int i = 0;
+  while (i < 3) {
+    total += ( circuit[i] * skilz[i] );
+    i += 1;
+  }
+  return total;
+};
+
+
+
+void Dm::remove_current_top_choice( Juggler& juggler ){
+  juggler.choice++;
+  if (juggler.choice == 6){
+    add_circuit_dot_p( circuits, juggler );
+  }
+  return;
+};
+
+void Dm::add_circuit_dot_p( CircuitInterface* circuits, Juggler& juggler ){
+  int skipped = 0;
+  int i = 0;
+  while (i < circuit_count) {
+    if (std::find(std::begin(juggler.choice_numbers), std::end(juggler.choice_numbers), i) != std::end(juggler.choice_numbers)){
+      skipped++;
+      continue;
+    }
+    int values[2] = { i, get_dot_value( i, juggler ) };
+    juggler.other_choices[i - skipped] = values;
+    i++;
+  }
+
+  std::sort(juggler.other_choices, juggler.other_choices + (circuit_count - choice_count), sort_other_choices);
+  return;
+};
+
 
 void Dm::new_circuit( std::string& line ){
   std::istringstream iss(line);
@@ -247,9 +244,9 @@ void Dm::new_juggler( std::string& line ){
   int* skilz = get_skilz( iss );
   int* choice_circuits = get_choice_circuits( iss );
   cout << "choice circuits " << *choice_circuits << endl;
-  Juggler juggler;
+  Juggler juggler(*this);
   juggler.number = juggler_num;
-  juggler.add_skilz_and_choice_circuits(skilz, juggler_num, choice_circuits);
+  add_skilz_and_choice_circuits(skilz, juggler_num, choice_circuits, juggler);
   jugglers.push_back(juggler);
 };
 
@@ -302,7 +299,7 @@ bool Circuit::not_nil_and_new_juggler_is_better( Juggler j, int i ){
 };
 
 void Circuit::switch_worst_juggler_with_new_juggler( Juggler j ){
-  jugglers[max_jugglers_per_circuit -1].remove_current_top_choice( dm );
+  dm.remove_current_top_choice(jugglers[max_jugglers_per_circuit -1]);
   dm.jugglers[dm.jugglers.size() -1] = jugglers[max_jugglers_per_circuit -1];
   jugglers[max_jugglers_per_circuit -1] = j;
   std::sort(std::begin(jugglers), std::end(jugglers), sort_by_dot_value);
@@ -311,7 +308,7 @@ void Circuit::switch_worst_juggler_with_new_juggler( Juggler j ){
 
 void Circuit::replace_worst_juggler_if_new_juggler_is_better( Juggler j ){
   if (jugglers[max_jugglers_per_circuit -1].dot_value() > j.dot_value()) {
-    j.remove_current_top_choice( dm );
+    dm.remove_current_top_choice( j );
   } else {
      switch_worst_juggler_with_new_juggler( j );
   }
