@@ -322,7 +322,7 @@ class Course
 
   def initialize
     @time = Time.now
-    @dm = Dm.new( File.readlines( "jugglefest.txt" ) )
+    @dm = Dm.new( File.readlines( "jugglefest_short.txt" ) )
   end
 
   def place_teams
